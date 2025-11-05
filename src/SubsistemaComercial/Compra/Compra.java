@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.List;
+import java.time.format.DateTimeFormatter;
 
 import SubsistemaComercial.Carrito.Carrito;
 import SubsistemaComercial.Carrito.LineaCarrito;
@@ -12,6 +13,7 @@ import Usuarios.Cliente.Cliente;
 
 public class Compra {
     private static int idCompra = 0;
+    private int id;
     private Cliente cliente;
     private final LocalDateTime fechaCompra;
     private double total;
@@ -24,6 +26,7 @@ public class Compra {
         this.estado = estado;
         this.lineas = new ArrayList<LineaCompra>();
         idCompra++;
+        this.id = idCompra;
     }
 
     public static int getIdCompra() {
@@ -76,11 +79,15 @@ public class Compra {
 
     public void mostrarCompra() {
         System.out.println("\n=== FACTURA ===");
-        System.out.println("ID: " + idCompra);
-        System.out.println("Fecha de Compra: " + fechaCompra);
+        System.out.println("ID: " + id);
 
+        //Pone la fecha bonita
+        DateTimeFormatter formato = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        System.out.println("Fecha de Compra: " + fechaCompra.format(formato));
+
+        System.out.println("\nProductos: \n");
         for (LineaCompra linea : lineas) {
-            System.out.println(" - " + lineas.toString());
+            System.out.println("- " + linea.getProducto().getNombre() + "                 Cantidad: " + linea.getCantidad());
         }
 
         System.out.println("Total: $" + total);

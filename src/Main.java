@@ -68,7 +68,7 @@ public class Main {
 
         // ======== Metodos de pago ========
 
-        MetodoPago m1 = new MetodoPago(74638, TipoPago.TARJETA_CREDITO, c1, 791739123);
+        MetodoPago m1 = new MetodoPago(74638, TipoPago.TARJETA_CREDITO, c1, 1234);
         c1.agregarMetodoPago(m1);
         MetodoPago m2 = new MetodoPago(63638, TipoPago.TRANSFERENCIA, c1, 938855885);
         c1.agregarMetodoPago(m2);
@@ -237,6 +237,7 @@ public class Main {
             System.out.println("9. Cerrar sesión");
             System.out.print("\nSeleccione una opción: ");
             op = scInt.nextInt();
+            scInt.nextLine();
 
             switch (op) {
                 case 1:
@@ -264,7 +265,7 @@ public class Main {
                                     System.out.println("\nProducto agregado con exito!!!");
                                     System.out.print("¿Desea agregar más productos a su carrito? Responda Si/No: ");
                                     String respuesta = scStr.next();
-                                    if (respuesta.equals("No")) {
+                                    if (respuesta.equals("No") || respuesta.equals("no") || respuesta.equals("NO")) {
                                         continuar = false;
                                     }
                                     break;
@@ -298,23 +299,24 @@ public class Main {
                     break;
 
                 case 5:
-                    // Verificar que el carrito tenga productos
+                    // 1) Verificar que el carrito tenga productos
                     if (cliente.getCarrito().estaVacio()) {
-                        throw new IllegalStateException("El carrito está vacío. Agrega productos antes de comprar.");
+                        System.out.println("❌ El carrito está vacío. Agrega productos antes de comprar.");
+                        break;
                     }
 
                     System.out.println("\nCarrito: ");
                     cliente.getCarrito().mostrarCarrito();
 
-                    // Generar compra (factura)
+                    // 2) Generar compra (factura)
                     Compra compra = new Compra(cliente);
                     compra.copiarDesdeCarrito(cliente.getCarrito());
                     compra.setEstado(EstadoCompra.CREADA);
                     compra.mostrarCompra();
 
-                    // Elegir metodo de pago
+                    // 3) Elegir metodo de pago
                     if (cliente.getMetodoPagos().isEmpty()) {
-                        System.out.println("\nNo tienes métodos de pago guardados. Elija la opcion 8 para agregarlos antes de continuar con la compra");
+                        System.out.println("\nNo tienes métodos de pago guardados. Elija la opción 8 para agregarlos antes de continuar con la compra");
                         compra.cancelarCompra();
                         break;
                     } else {
@@ -323,106 +325,144 @@ public class Main {
                             System.out.println("ID: " + metodoPago.id() + " - " + metodoPago.tipo());
                         }
 
-                        System.out.print("\n Escriba el Id del método de pago que escoje: ");
+                        System.out.print("\n Escriba el Id del método de pago que escoge: ");
                         int id = scInt.nextInt();
+                        scInt.nextLine(); // consumir salto de línea
+
+                        boolean encontrado = false;
 
                         for (MetodoPago metodoPago : cliente.getMetodoPagos()) {
                             if (id == metodoPago.id()) {
-                                System.out.print("Ingrese el numero oculto: ");
+                                encontrado = true;
+                                System.out.print("Ingrese el número oculto (tres intentos): ");
 
                                 for (int i = 0; i < 3; i++) {
                                     int numOculto = scInt.nextInt();
-                                    metodoPago.confirmarPago(numOculto);
-                                    if (compra.getEstado() ==  EstadoCompra.PAGADA) {
-                                        for (LineaCompra lineas : compra.getLineas()) {
-                                            Producto producto = lineas.getProducto();
-                                            int cantidad = lineas.getCantidad();
+                                    scInt.nextLine();
+
+                                    // Este metodo actualiza el estado de la compra, error que impedia que nos entrara al if
+                                    metodoPago.confirmarPago(numOculto, compra);
+
+                                    if (compra.getEstado() == EstadoCompra.PAGADA) {
+                                        // Actualizar stock, vaciar carrito, guardar historial
+                                        for (LineaCompra linea : compra.getLineas()) {
+                                            Producto producto = linea.getProducto();
+                                            int cantidad = linea.getCantidad();
                                             producto.reducirStock(cantidad);
-                                            cliente.getCarrito().vaciarCarrito();
-                                            cliente.agregarHistorialCompras(compra);
                                         }
+
+                                        cliente.getCarrito().vaciarCarrito();
+                                        cliente.agregarHistorialCompras(compra);
+                                        System.out.println("Compra realizada con éxito. ¡Gracias por elegir Glow Up!");
                                         break;
-                                    } else {
-                                        compra.cancelarCompra();
+                                    } else if (i < 2) {
+                                        System.out.print("Intente nuevamente: ");
                                     }
-                                }break;
+                                }
+
+                                if (compra.getEstado() != EstadoCompra.PAGADA) {
+                                    compra.cancelarCompra();
+                                    System.out.println("❌ No se pudo confirmar el pago. Compra cancelada.");
+                                }
+                                break;
                             }
                         }
+
+                        if (!encontrado) {
+                            System.out.println("❌ Metodo de pago no encontrado.");
+                        }
+                        break;
                     }
-/*
+
+
                 case 6:
-
                     cliente.mostrarHistorialCompras();
+                    break;
 
-                /*case 5 -> cliente.mostrarCarrito();
-System.out.print("¿Deseas registrar una tarjeta ahora? (s/n): ");
-                            String respuesta = sc.nextLine();
+                case 7:
+                    System.out.println("\n=== REGISTRO DE MÉTODO DE PAGO ===");
 
-                            if (respuesta.equalsIgnoreCase("s")) {
-                                System.out.print("Titular de la tarjeta: ");
-                                String titular = sc.nextLine();
+                    System.out.println("Tipo de pago:");
+                    System.out.println("1. TARJETA_CREDITO");
+                    System.out.println("2. TARJETA_DEBITO");
+                    System.out.println("3. TRANSFERENCIA");
+                    System.out.println("4. EFECTIVO");
+                    System.out.print("Elige una opción: ");
+                    int opcionTipo = scInt.nextInt();
 
-                                // Puedes generar número oculto aleatorio si quieres
-                                int numeroOculto = (int) (Math.random() * 9000 + 1000);
-                                MetodoPago nuevoMetodo = new MetodoPago("MP-" + cliente.getId(),
-                                        TipoPago.TARJETA_CREDITO,
-                                        cliente,
-                                        numeroOculto);
-                                cliente.agregarMetodoPago(nuevoMetodo);
-                                System.out.println("✅ Método de pago registrado.");
-                case 6 -> {
-                    try {
-                        Compra compraPrev = cliente.generarCompraDesdeCarrito();
-                        System.out.println("✅ Previsualización de compra:");
-                        compraPrev.mostrarCompra();
-                    } catch (Exception e) {
-                        System.out.println("⚠ " + e.getMessage());
-                    }
-                }
+                    TipoPago tipoPago;
 
-                case 7 -> {
-                    if (cliente.getCarrito().estaVacio()) {
-                        System.out.println("❌ Carrito vacío.");
-                        break;
-                    }
-                    // Generamos la compra a pagar
-                    Compra compra = cliente.generarCompraDesdeCarrito();
-                    System.out.println("Total a pagar: $" + compra.getTotal());
-
-                    // Elegir método de pago: usar guardado o crear uno rápido
-                    if (cliente.getMetodos().isEmpty()) {
-                        System.out.println("No tienes métodos guardados. Creemos uno rápido:");
-                        System.out.print("Titular tarjeta: ");
-                        String titular = sc.nextLine();
-                        MetodoPago mp = new TarjetaCredito(titular, "**** **** **** 1234", "123");
-                        cliente.agregarMetodoPago(mp);
+                    switch (opcionTipo) {
+                        case 1 -> tipoPago = TipoPago.TARJETA_CREDITO;
+                        case 2 -> tipoPago = TipoPago.TARJETA_DEBITO;
+                        case 3 -> tipoPago = TipoPago.TRANSFERENCIA;
+                        case 4 -> tipoPago = TipoPago.EFECTIVO;
+                        default -> {
+                            System.out.println("⚠️ Opción inválida, se asignará EFECTIVO por defecto.");
+                            tipoPago = TipoPago.EFECTIVO;
+                        }
                     }
 
-                    System.out.println("\nElige método de pago:");
-                    cliente.mostrarMetodosPago();
-                    System.out.print("Número (1..n): ");
-                    int idx = Math.max(1, leerInt(sc)) - 1;
-                    if (idx < 0 || idx >= cliente.getMetodos().size()) {
-                        System.out.println("❌ Opción inválida.");
-                        break;
+                    System.out.print("ID numérico del método de pago: ");
+                    int idMetodo = scInt.nextInt();
+
+                    System.out.print("Número oculto: ");
+                    int numeroOculto = scInt.nextInt();
+
+                    MetodoPago nuevoMetodo = new MetodoPago(idMetodo, tipoPago, cliente, numeroOculto);
+                    cliente.agregarMetodoPago(nuevoMetodo);
+
+                    System.out.println("✅ Método de pago registrado: ID " + idMetodo + " | Tipo: " + tipoPago);
+                    break;
+
+
+                case 8:
+                    System.out.println("\n=== ACTUALIZAR DATOS DEL CLIENTE ===");
+                    System.out.println("1. Email");
+                    System.out.println("2. Contraseña");
+                    System.out.println("3. Direccion");
+                    System.out.println("4. Telefono");
+                    System.out.print("\nElija la informacion que desea actualizar: ");
+                    int opcionNuevo = scInt.nextInt();
+                    switch (opcionNuevo) {
+                        case 1:
+                            System.out.print("Nuevo email: ");
+                            String nuevoEmail = scStr.nextLine();
+                            cliente.setEmail(nuevoEmail);
+                            break;
+
+                        case 2:
+                            System.out.print("Nueva contraseña: ");
+                            String nuevaPassword = scStr.nextLine();
+                            cliente.setPassword(nuevaPassword);
+                            break;
+
+                        case 3:
+                            System.out.print("Nueva dirección: ");
+                            String nuevaDireccion = scStr.nextLine();
+                            cliente.setDireccion(nuevaDireccion);
+                            break;
+
+                        case 4:
+                            System.out.print("Nuevo teléfono: ");
+                            String nuevoTelefono = scStr.nextLine();
+                            cliente.setTelefono(nuevoTelefono);
+                            break;
                     }
-                    MetodoPago elegido = cliente.getMetodos().get(idx);
 
-                    boolean ok = cliente.pagarCompra(compra, elegido);
-                    if (ok) System.out.println("✅ Pago confirmado.");
-                    else    System.out.println("❌ Pago rechazado.");
-                }
+                    System.out.println("✅ Datos actualizados correctamente.");
+                    break;
 
-                case 8 -> cliente.mostrarHistorial();
+                case 9:
+                    System.out.println("\n👋 Sesión cerrada correctamente. Volviendo al menú principal...");
+                    op = 0;
+                    break;
 
-                case 0 -> System.out.println("👋 Sesión cerrada.");
-
-                default -> System.out.println("⚠ Opción inválida.");
+                default:
+                    System.out.println("⚠ Opción inválida.");
             }
-*/
 
-            }
         }
             while (op != 0) ;
-}}
+}   }
 
