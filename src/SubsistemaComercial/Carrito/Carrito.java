@@ -29,19 +29,37 @@ public class Carrito {
         return fechaCreacion;
     }
 
-    public void agregarProducto (Producto producto, int cantidad) {
-        LineaCarrito linea = new LineaCarrito(producto, cantidad);
-        if (linea.getProducto().getId() == producto.getId()) {
-            linea.setCantidad(linea.getCantidad() + cantidad);
-        } else if (producto == null) {
-            throw new IllegalArgumentException("No agregaste ningun producto");
-        } else if (cantidad < 1) {
-            throw new IllegalArgumentException("Cantidad inválida");
-        } else if (producto.getStock() < cantidad) {
-            throw new IllegalArgumentException("Stock insuficiente");
-        } else {
-            lineas.add(linea);
+    public void agregarProducto(Producto producto, int cantidad) {
+        if (producto == null) {
+            throw new IllegalArgumentException("No agregaste ningún producto.");
         }
+        if (cantidad < 1) {
+            throw new IllegalArgumentException("Cantidad inválida (debe ser >= 1).");
+        }
+        if (producto.getStock() <= 0) {
+            throw new IllegalArgumentException("No hay stock disponible.");
+        }
+
+        for (LineaCarrito l : lineas) {
+            if (l.getProducto().getId() == producto.getId()) {
+                int nuevaCantidad = l.getCantidad() + cantidad;
+
+                // Validar stock considerando lo que YA hay en el carrito
+                if (nuevaCantidad > producto.getStock()) {
+                    throw new IllegalArgumentException("Stock insuficiente. " + "Unidades disponibles: " + producto.getStock());
+                }
+
+                l.setCantidad(nuevaCantidad);
+                return;
+            }
+        }
+
+        // Si no existía línea previa, validar stock y crearla
+        if (cantidad > producto.getStock()) {
+            throw new IllegalArgumentException("Stock insuficiente. " + "Unidades disponibles: " + producto.getStock());
+        }
+
+        lineas.add(new LineaCarrito(producto, cantidad));
     }
 
     public double calcularTotal() {
@@ -60,8 +78,7 @@ public class Carrito {
             System.out.println("\n=== CARRITO DE COMPRAS ===");
             for (LineaCarrito linea : lineas) {
                 Producto p = linea.getProducto();
-                System.out.println("- " + p.getNombre() + " x" + linea.getCantidad() +
-                        " = $" + linea.getSubtotal());
+                System.out.println("ID: " + p.getId() + " - " + p.getNombre() + " x" + linea.getCantidad() + " = $" + linea.getSubtotal());
             }
             System.out.println("Total: $" + calcularTotal());
         }
@@ -72,13 +89,17 @@ public class Carrito {
     }
 
     public void eliminarProducto(int idProducto) {
-        try {
-            if (idProducto >= 0 && idProducto < lineas.size()) {
-                lineas.remove(idProducto);
+        boolean encontrado = false;
+
+        for (int i = 0; i < lineas.size(); i++) {
+            if (lineas.get(i).getProducto().getId() == idProducto) {
+                lineas.remove(i);
+                encontrado = true;
+                System.out.println("✅ Producto eliminado del carrito.");
             }
         }
-        catch (IndexOutOfBoundsException e) {
-            System.out.println("Elige un numero valido");
+        if (encontrado == false) {
+            System.out.println("No existe el producto con el id " + idProducto);;
         }
     }
 

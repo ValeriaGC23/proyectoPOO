@@ -43,6 +43,10 @@ public class Compra {
         this.estado = estado;
     }
 
+    public EstadoCompra getEstado() {
+        return estado;
+    }
+
     public List<LineaCompra> getLineas() {
         return lineas;
     }
@@ -71,7 +75,7 @@ public class Compra {
     }
 
     public void mostrarCompra() {
-        System.out.println("\n=== FACTURA ===\n");
+        System.out.println("\n=== FACTURA ===");
         System.out.println("ID: " + idCompra);
         System.out.println("Fecha de Compra: " + fechaCompra);
 

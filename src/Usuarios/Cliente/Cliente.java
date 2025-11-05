@@ -1,14 +1,10 @@
 package Usuarios.Cliente;
 
-import Excepciones.noCarritoException;
 import SubsistemaComercial.Compra.Compra;
-import SubsistemaComercial.Producto.Producto;
-import Usuarios.EstadoCuenta;
 import Usuarios.Usuario;
 import SubsistemaComercial.Carrito.Carrito;
 
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,6 +55,13 @@ public class Cliente extends Usuario {
 
     public List<Compra> getHistorialCompras() {
         return historialCompras;
+    }
+
+    public void mostrarHistorialCompras() {
+        System.out.println("\n===== Historial Compras ======\n");
+        for (Compra compra : historialCompras) {
+            compra.mostrarCompra();
+        }
     }
 
     public void agregarHistorialCompras(Compra compra) {

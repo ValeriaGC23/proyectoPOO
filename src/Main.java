@@ -1,4 +1,7 @@
 import SubsistemaComercial.Carrito.Carrito;
+import SubsistemaComercial.Compra.Compra;
+import SubsistemaComercial.Compra.EstadoCompra;
+import SubsistemaComercial.Compra.LineaCompra;
 import SubsistemaComercial.Producto.*;
 import Usuarios.Cliente.Cliente;
 import Usuarios.Cliente.MetodoPago;
@@ -182,7 +185,7 @@ public class Main {
                                 intentos = 4;
                                 correcto = true;
                                 System.out.println("\n-- Bienvenido a Glow Up -- \n  Usuario: " + c.getNombre());
-                                submenuCliente(c);
+                                submenuCliente(c, productos);
                                 break;
                             }
                         }
@@ -218,7 +221,8 @@ public class Main {
 
     //MENU SECUNDARIO
     private static void submenuCliente(Cliente cliente, List<Producto> productos) {
-        Scanner sc2 = new Scanner(System.in);
+        Scanner scInt = new Scanner(System.in);
+        Scanner scStr = new Scanner(System.in);
         int op;
         do {
             System.out.println("\n===== MENÚ CLIENTE =====\n");
@@ -227,13 +231,12 @@ public class Main {
             System.out.println("3. Agregar productos al carrito");
             System.out.println("4. Eliminar productos del carrito");
             System.out.println("5. Comprar");
-            System.out.println("6. Cancelar compra");
-            System.out.println("7. Ver historial de compras");
-            System.out.println("8. Configurar mis metodos de pago");
+            System.out.println("6. Ver historial de compras");
+            System.out.println("7. Configurar mis metodos de pago");
+            System.out.println("8. Actualizar datos");
             System.out.println("9. Cerrar sesión");
             System.out.print("\nSeleccione una opción: ");
-            op = sc2.nextInt();
-            sc2.nextLine(); // limpiar Scanner
+            op = scInt.nextInt();
 
             switch (op) {
                 case 1:
@@ -246,51 +249,127 @@ public class Main {
 
                 case 3:
                     mostrarCatalogo(productos);
-                    System.out.println("Ingrese el ID del producto que quiera añadir al carrito");
-                    for (Producto p : productos) {
+                    boolean continuar = true;
+                    do {
+                        int contador = 0;
+                        System.out.print("\nIngrese el ID del producto que desea agregar al carrito: ");
+                        int id = scInt.nextInt();
+                        System.out.print("Ingrese la cantidad que desea de este producto: ");
+                        int cantidad = scInt.nextInt();
+                        for (Producto p : productos) {
+                            if (id == p.getId()) {
+                                contador++;
+                                if (cantidad <= p.getStock()) {
+                                    cliente.getCarrito().agregarProducto(p, cantidad);
+                                    System.out.println("\nProducto agregado con exito!!!");
+                                    System.out.print("¿Desea agregar más productos a su carrito? Responda Si/No: ");
+                                    String respuesta = scStr.next();
+                                    if (respuesta.equals("No")) {
+                                        continuar = false;
+                                    }
+                                    break;
+                                } else {
+                                    System.out.println("\nEn el momento no tenemos disponible la cantidad de unidades que desea del producto, nos quedan " + p.getStock() + " unidades.");
+                                    System.out.println("Producto no agregado al carrito");
+                                }
+                            }
+                        }
 
+                        if (contador == 0) {
+                            System.out.println("No existe ningun producto con ese id");
+                        }
+
+                    } while (continuar == true);
+                    break;
+
+                case 4:
+                    boolean continuar2 = true;
+                    cliente.getCarrito().mostrarCarrito();
+                    do {
+                        System.out.print("\nIngrese el ID del producto que desea eliminar del carrito: ");
+                        int idProducto = scInt.nextInt();
+                        cliente.getCarrito().eliminarProducto(idProducto);
+                        System.out.print("¿Desea eliminar más productos de su carrito? Responda Si/No: ");
+                        String respuesta = scStr.next();
+                        if (respuesta.equals("No")) {
+                            continuar2 = false;
+                        }
+                    } while (continuar2 == true);
+                    break;
+
+                case 5:
+                    // Verificar que el carrito tenga productos
+                    if (cliente.getCarrito().estaVacio()) {
+                        throw new IllegalStateException("El carrito está vacío. Agrega productos antes de comprar.");
                     }
-                    cliente.getCarrito().agregarProducto();
 
-/*
+                    System.out.println("\nCarrito: ");
+                    cliente.getCarrito().mostrarCarrito();
 
-                    System.out.print("ID categoría: ");
-                    int idCat = leerInt(sc);
-                    System.out.println("\n=== Productos de esa categoría ===");
-                    boolean hay = false;
-                    for (Producto p : productos) {
-                        if (p.getCategoria().getId() == idCat) {
-                            System.out.println(p);
-                            hay = true;
+                    // Generar compra (factura)
+                    Compra compra = new Compra(cliente);
+                    compra.copiarDesdeCarrito(cliente.getCarrito());
+                    compra.setEstado(EstadoCompra.CREADA);
+                    compra.mostrarCompra();
+
+                    // Elegir metodo de pago
+                    if (cliente.getMetodoPagos().isEmpty()) {
+                        System.out.println("\nNo tienes métodos de pago guardados. Elija la opcion 8 para agregarlos antes de continuar con la compra");
+                        compra.cancelarCompra();
+                        break;
+                    } else {
+                        System.out.println("\n=== MÉTODOS DE PAGO ===");
+                        for (MetodoPago metodoPago : cliente.getMetodoPagos()) {
+                            System.out.println("ID: " + metodoPago.id() + " - " + metodoPago.tipo());
+                        }
+
+                        System.out.print("\n Escriba el Id del método de pago que escoje: ");
+                        int id = scInt.nextInt();
+
+                        for (MetodoPago metodoPago : cliente.getMetodoPagos()) {
+                            if (id == metodoPago.id()) {
+                                System.out.print("Ingrese el numero oculto: ");
+
+                                for (int i = 0; i < 3; i++) {
+                                    int numOculto = scInt.nextInt();
+                                    metodoPago.confirmarPago(numOculto);
+                                    if (compra.getEstado() ==  EstadoCompra.PAGADA) {
+                                        for (LineaCompra lineas : compra.getLineas()) {
+                                            Producto producto = lineas.getProducto();
+                                            int cantidad = lineas.getCantidad();
+                                            producto.reducirStock(cantidad);
+                                            cliente.getCarrito().vaciarCarrito();
+                                            cliente.agregarHistorialCompras(compra);
+                                        }
+                                        break;
+                                    } else {
+                                        compra.cancelarCompra();
+                                    }
+                                }break;
+                            }
                         }
                     }
-                    if (!hay) System.out.println("(sin productos)");
-                }
+/*
+                case 6:
 
-                case 4 -> {
-                    mostrarProductos(productos);
-                    System.out.print("ID producto: ");
-                    int idProd = leerInt(sc);
-                    Producto seleccionado = null;
-                    for (Producto p : productos) {
-                        if (p.getId() == idProd) { seleccionado = p; break; }
-                    }
-                    if (seleccionado == null) {
-                        System.out.println("❌ Producto no encontrado.");
-                        break;
-                    }
-                    System.out.print("Cantidad: ");
-                    int cant = leerInt(sc);
-                    try {
-                        cliente.agregarAlCarrito(seleccionado, cant);
-                        System.out.println("✅ Agregado al carrito.");
-                    } catch (Exception e) {
-                        System.out.println("⚠ " + e.getMessage());
-                    }
-                }
+                    cliente.mostrarHistorialCompras();
 
-                case 5 -> cliente.mostrarCarrito();
+                /*case 5 -> cliente.mostrarCarrito();
+System.out.print("¿Deseas registrar una tarjeta ahora? (s/n): ");
+                            String respuesta = sc.nextLine();
 
+                            if (respuesta.equalsIgnoreCase("s")) {
+                                System.out.print("Titular de la tarjeta: ");
+                                String titular = sc.nextLine();
+
+                                // Puedes generar número oculto aleatorio si quieres
+                                int numeroOculto = (int) (Math.random() * 9000 + 1000);
+                                MetodoPago nuevoMetodo = new MetodoPago("MP-" + cliente.getId(),
+                                        TipoPago.TARJETA_CREDITO,
+                                        cliente,
+                                        numeroOculto);
+                                cliente.agregarMetodoPago(nuevoMetodo);
+                                System.out.println("✅ Método de pago registrado.");
                 case 6 -> {
                     try {
                         Compra compraPrev = cliente.generarCompraDesdeCarrito();
@@ -342,10 +421,8 @@ public class Main {
             }
 */
 
-
             }
-        } while (op != 0);
-
-    }
-}
+        }
+            while (op != 0) ;
+}}
 
